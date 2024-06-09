@@ -61,6 +61,9 @@ func (p *LocalPlugin) CLIGetVariable(args []string) (string, error) {
 	}
 
 	value, secret := p.Store.GetEnv(name)
+	if value == "" {
+		return "", fmt.Errorf("the variable is not set")
+	}
 	if secret {
 		return "", fmt.Errorf("the variable is a secret")
 	}
