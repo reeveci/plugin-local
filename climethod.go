@@ -5,21 +5,21 @@ import (
 )
 
 var CLIMethods = map[string]string{
-	"set-variable": "<name> <value> - set environment variable",
-	"get-variable": "<name> - get environment variable",
-	"set-secret":   "<name> <value> - set secret environment variable",
-	"unset":        "<name> - unset environment variable",
+	"var-set":    "<name> <value> - set environment variable",
+	"var-get":    "<name> - get environment variable",
+	"secret-set": "<name> <value> - set environment secret",
+	"unset":      "<name> - unset environment variable or secret",
 }
 
 func (p *LocalPlugin) CLIMethod(method string, args []string) (string, error) {
 	switch method {
-	case "set-variable":
+	case "var-set":
 		return p.CLISetVariable(args)
 
-	case "get-variable":
+	case "var-get":
 		return p.CLIGetVariable(args)
 
-	case "set-secret":
+	case "secret-set":
 		return p.CLISetSecret(args)
 
 	case "unset":
@@ -32,7 +32,7 @@ func (p *LocalPlugin) CLIMethod(method string, args []string) (string, error) {
 
 func (p *LocalPlugin) CLISetVariable(args []string) (string, error) {
 	if len(args) != 2 {
-		return "", fmt.Errorf("set-variable expects two arguments but got %v", len(args))
+		return "", fmt.Errorf("var-set expects two arguments but got %v", len(args))
 	}
 
 	name := args[0]
@@ -72,7 +72,7 @@ func (p *LocalPlugin) CLIGetVariable(args []string) (string, error) {
 
 func (p *LocalPlugin) CLISetSecret(args []string) (string, error) {
 	if len(args) != 2 {
-		return "", fmt.Errorf("set-secret expects two arguments but got %v", len(args))
+		return "", fmt.Errorf("secret-set expects two arguments but got %v", len(args))
 	}
 
 	name := args[0]
