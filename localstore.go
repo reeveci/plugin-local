@@ -38,7 +38,7 @@ func (s *LocalStore) Notify() {
 	if hasUI {
 		SendEnvBundleMessage(s.plugin, EnvBundle{
 			BundleID: "env",
-			Env:      s.GetAllEnv(),
+			Env:      censorSecrets(s.GetAllEnv()),
 		})
 	}
 }
@@ -205,4 +205,18 @@ func (s *LocalStore) importConfig(source ExternalConfig) (result Config, err err
 	}
 
 	return
+}
+
+func censorSecrets(env map[string]schema.Env) map[string]schema.Env {
+	censoredEnv := make(map[string]schema.Env, len(env))
+
+	for key, env := range env {
+		if env.Secret {
+			env.Value = "*******"
+		}
+
+		censoredEnv[key] = env
+	}
+
+	return censoredEnv
 }
