@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+
+	"gopkg.in/yaml.v3"
 )
 
 var CLIMethods = map[string]string{
@@ -9,6 +11,7 @@ var CLIMethods = map[string]string{
 	"var-get":    "<name> - get environment variable",
 	"secret-set": "<name> <value> - set environment secret",
 	"unset":      "<name> - unset environment variable or secret",
+	"list":       "- list environment variables and secrets",
 }
 
 func (p *LocalPlugin) CLIMethod(method string, args []string) (string, error) {
@@ -24,6 +27,9 @@ func (p *LocalPlugin) CLIMethod(method string, args []string) (string, error) {
 
 	case "unset":
 		return p.CLIUnset(args)
+
+	case "list":
+		return p.CLIList(args)
 
 	default:
 		return "", fmt.Errorf("unknown method %s", method)
@@ -105,4 +111,33 @@ func (p *LocalPlugin) CLIUnset(args []string) (string, error) {
 		return "", fmt.Errorf("unsetting key failed - %s", err)
 	}
 	return "ok", nil
+}
+
+func (p *LocalPlugin) CLIList(args []string) (string, error) {
+	if len(args) != 0 {
+		return "", fmt.Errorf("list expects no arguments but got %v", len(args))
+	}
+
+	env := p.Store.GetAllEnv()
+	list := struct {
+		Vars    []string `yaml:"vars"`
+		Secrets []string `yaml:"secrets"`
+	}{
+		Vars:    make([]string, 0, len(env)),
+		Secrets: make([]string, 0, len(env)),
+	}
+	for key, env := range env {
+		if env.Secret {
+			list.Secrets = append(list.Secrets, key)
+		} else {
+			list.Vars = append(list.Vars, key)
+		}
+	}
+
+	result, err := yaml.Marshal(list)
+	if err != nil {
+		return "", fmt.Errorf("error generating output - %s", err)
+	}
+
+	return string(result), nil
 }

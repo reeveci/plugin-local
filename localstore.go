@@ -48,13 +48,25 @@ func (s *LocalStore) SetEnv(name string, value string, secret bool) error {
 		return fmt.Errorf("missing name")
 	}
 
-	s.lock.Lock()
 	if value != "" {
-		s.data.Env[name] = Env{Value: value, Secret: secret}
+		if secret {
+			encryptedValue, err := encryption.EncryptSecret(s.plugin.SecretKey, value)
+			if err != nil {
+				return fmt.Errorf("error encrypting secret - %s", err)
+			}
+			s.lock.Lock()
+			s.data.Env[name] = Env{Value: value, Encrypted: encryptedValue, Secret: true}
+			s.lock.Unlock()
+		} else {
+			s.lock.Lock()
+			s.data.Env[name] = Env{Value: value, Secret: false}
+			s.lock.Unlock()
+		}
 	} else {
+		s.lock.Lock()
 		delete(s.data.Env, name)
+		s.lock.Unlock()
 	}
-	s.lock.Unlock()
 
 	err := s.write()
 	if err != nil {
@@ -94,9 +106,9 @@ func (s *LocalStore) GetAllEnv() map[string]schema.Env {
 	defer s.lock.Unlock()
 
 	result := make(map[string]schema.Env, len(s.data.Env))
-	for name, env := range s.data.Env {
+	for key, env := range s.data.Env {
 		if env.Value != "" {
-			result[name] = schema.Env{Value: env.Value, Priority: s.plugin.Priority, Secret: env.Secret}
+			result[key] = schema.Env{Value: env.Value, Priority: s.plugin.Priority, Secret: env.Secret}
 		}
 	}
 	return result
@@ -104,7 +116,7 @@ func (s *LocalStore) GetAllEnv() map[string]schema.Env {
 
 func (s *LocalStore) write() error {
 	s.lock.Lock()
-	encryptedData, err := s.encrypt(s.data)
+	externalConfig, err := s.exportConfig(s.data)
 	s.lock.Unlock()
 	if err != nil {
 		return err
@@ -116,7 +128,7 @@ func (s *LocalStore) write() error {
 		return fmt.Errorf("cannot create config directory %s - %s", configDir, err)
 	}
 
-	content, err := json.Marshal(encryptedData)
+	content, err := json.Marshal(externalConfig)
 	if err != nil {
 		return fmt.Errorf("cannot stringify config - %s", err)
 	}
@@ -143,43 +155,40 @@ func (s *LocalStore) read() error {
 		return fmt.Errorf("cannot read config file %s - %s", configFile, err)
 	}
 
-	var data Config
+	var externalConfig ExternalConfig
 	if len(content) > 0 {
-		err := json.Unmarshal(content, &data)
+		err := json.Unmarshal(content, &externalConfig)
 		if err != nil {
 			return fmt.Errorf("cannot parse config file - %s", err)
 		}
 	}
 
-	decryptedData, err := s.decrypt(data)
+	config, err := s.importConfig(externalConfig)
 	if err != nil {
 		return err
 	}
 
 	s.lock.Lock()
-	s.data = decryptedData
+	s.data = config
 	s.lock.Unlock()
 
 	return nil
 }
 
-func (s *LocalStore) encrypt(source Config) (result Config, err error) {
-	result.Env = make(map[string]Env, len(source.Env))
+func (s *LocalStore) exportConfig(source Config) (result ExternalConfig, err error) {
+	result.Env = make(map[string]ExternalEnv, len(source.Env))
 	for key, env := range source.Env {
 		if env.Secret {
-			encryptedValue, err := encryption.EncryptSecret(s.plugin.SecretKey, env.Value)
-			if err != nil {
-				return result, fmt.Errorf("error encrypting secret %s - %s", key, err)
-			}
-			env.Value = encryptedValue
+			result.Env[key] = ExternalEnv{Value: env.Encrypted, Secret: true}
+		} else {
+			result.Env[key] = ExternalEnv{Value: env.Value, Secret: false}
 		}
-		result.Env[key] = env
 	}
 
 	return
 }
 
-func (s *LocalStore) decrypt(source Config) (result Config, err error) {
+func (s *LocalStore) importConfig(source ExternalConfig) (result Config, err error) {
 	result.Env = make(map[string]Env, len(source.Env))
 	for key, env := range source.Env {
 		if env.Secret {
@@ -187,9 +196,12 @@ func (s *LocalStore) decrypt(source Config) (result Config, err error) {
 			if err != nil {
 				return result, fmt.Errorf("error decrypting secret %s - %s", key, err)
 			}
-			env.Value = decryptedValue
+			if decryptedValue != "" {
+				result.Env[key] = Env{Value: decryptedValue, Encrypted: env.Value, Secret: true}
+			}
+		} else if env.Value != "" {
+			result.Env[key] = Env{Value: env.Value, Secret: false}
 		}
-		result.Env[key] = env
 	}
 
 	return

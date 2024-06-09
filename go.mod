@@ -5,6 +5,7 @@ go 1.22.3
 require (
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/reeveci/reeve-lib v1.1.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
