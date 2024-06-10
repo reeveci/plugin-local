@@ -10,8 +10,8 @@ Configuration is also supported via the CLI API:
 
 ```sh
 reeve-cli --url <server-url> --usage
-reeve-cli --url <server-url> local var-set <name> <value>
-reeve-cli --url <server-url> local secret-set <name> <value>
+reeve-cli --url <server-url> local set <name> <value>
+reeve-cli --url <server-url> local set-secret <name> <value>
 ```
 
 Encryption takes place on the server, so make sure to use a secure connection between reeve-cli and the server. That is, use TLS with a valid certificate and do not set the `--insecure` flag.

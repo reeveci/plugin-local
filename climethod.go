@@ -7,22 +7,22 @@ import (
 )
 
 var CLIMethods = map[string]string{
-	"var-set":    "<name> <value> - set environment variable",
-	"var-get":    "<name> - get environment variable",
-	"secret-set": "<name> <value> - set environment secret",
+	"set":        "<name> <value> - set environment variable",
+	"get":        "<name> - get environment variable",
+	"set-secret": "<name> <value> - set environment secret",
 	"unset":      "<name> - unset environment variable or secret",
 	"list":       "- list environment variables and secrets",
 }
 
 func (p *LocalPlugin) CLIMethod(method string, args []string) (string, error) {
 	switch method {
-	case "var-set":
-		return p.CLISetVariable(args)
+	case "set":
+		return p.CLISet(args)
 
-	case "var-get":
-		return p.CLIGetVariable(args)
+	case "get":
+		return p.CLIGet(args)
 
-	case "secret-set":
+	case "set-secret":
 		return p.CLISetSecret(args)
 
 	case "unset":
@@ -36,9 +36,9 @@ func (p *LocalPlugin) CLIMethod(method string, args []string) (string, error) {
 	}
 }
 
-func (p *LocalPlugin) CLISetVariable(args []string) (string, error) {
+func (p *LocalPlugin) CLISet(args []string) (string, error) {
 	if len(args) != 2 {
-		return "", fmt.Errorf("var-set expects two arguments but got %v", len(args))
+		return "", fmt.Errorf("two arguments are expected but there are %v", len(args))
 	}
 
 	name := args[0]
@@ -50,14 +50,14 @@ func (p *LocalPlugin) CLISetVariable(args []string) (string, error) {
 
 	err := p.Store.SetEnv(name, value, false)
 	if err != nil {
-		return "", fmt.Errorf("setting variable failed - %s", err)
+		return "", err
 	}
 	return "ok", nil
 }
 
-func (p *LocalPlugin) CLIGetVariable(args []string) (string, error) {
+func (p *LocalPlugin) CLIGet(args []string) (string, error) {
 	if len(args) != 1 {
-		return "", fmt.Errorf("encrypt expects one argument but got %v", len(args))
+		return "", fmt.Errorf("one argument is expected but there are %v", len(args))
 	}
 
 	name := args[0]
@@ -68,17 +68,17 @@ func (p *LocalPlugin) CLIGetVariable(args []string) (string, error) {
 
 	value, secret := p.Store.GetEnv(name)
 	if value == "" {
-		return "", fmt.Errorf("the variable is not set")
+		return "", fmt.Errorf("the variable does not exist")
 	}
 	if secret {
-		return "", fmt.Errorf("the variable is a secret")
+		return "", fmt.Errorf("the value is secret")
 	}
 	return value, nil
 }
 
 func (p *LocalPlugin) CLISetSecret(args []string) (string, error) {
 	if len(args) != 2 {
-		return "", fmt.Errorf("secret-set expects two arguments but got %v", len(args))
+		return "", fmt.Errorf("two arguments are expected but there are %v", len(args))
 	}
 
 	name := args[0]
@@ -90,14 +90,14 @@ func (p *LocalPlugin) CLISetSecret(args []string) (string, error) {
 
 	err := p.Store.SetEnv(name, value, true)
 	if err != nil {
-		return "", fmt.Errorf("setting secret failed - %s", err)
+		return "", err
 	}
 	return "ok", nil
 }
 
 func (p *LocalPlugin) CLIUnset(args []string) (string, error) {
 	if len(args) != 1 {
-		return "", fmt.Errorf("encrypt expects one argument but got %v", len(args))
+		return "", fmt.Errorf("one argument is expected but there are %v", len(args))
 	}
 
 	name := args[0]
@@ -106,16 +106,21 @@ func (p *LocalPlugin) CLIUnset(args []string) (string, error) {
 		return "", fmt.Errorf("no name was specified")
 	}
 
+	value, _ := p.Store.GetEnv(name)
+	if value == "" {
+		return "", fmt.Errorf("the variable does not exist")
+	}
+
 	err := p.Store.SetEnv(name, "", false)
 	if err != nil {
-		return "", fmt.Errorf("unsetting key failed - %s", err)
+		return "", err
 	}
 	return "ok", nil
 }
 
 func (p *LocalPlugin) CLIList(args []string) (string, error) {
 	if len(args) != 0 {
-		return "", fmt.Errorf("list expects no arguments but got %v", len(args))
+		return "", fmt.Errorf("no arguments are expected but there are %v", len(args))
 	}
 
 	env := p.Store.GetAllEnv()
@@ -136,7 +141,7 @@ func (p *LocalPlugin) CLIList(args []string) (string, error) {
 
 	result, err := yaml.Marshal(list)
 	if err != nil {
-		return "", fmt.Errorf("error generating output - %s", err)
+		return "", err
 	}
 
 	return string(result), nil
