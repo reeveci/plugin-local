@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 
 	"gopkg.in/yaml.v3"
 )
@@ -138,6 +139,8 @@ func (p *LocalPlugin) CLIList(args []string) (string, error) {
 			list.Vars = append(list.Vars, key)
 		}
 	}
+	sort.Strings(list.Vars)
+	sort.Strings(list.Secrets)
 
 	result, err := yaml.Marshal(list)
 	if err != nil {
