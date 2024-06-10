@@ -132,11 +132,11 @@ func (p *LocalPlugin) CLIList(args []string) (string, error) {
 		Vars:    make([]string, 0, len(env)),
 		Secrets: make([]string, 0, len(env)),
 	}
-	for key, env := range env {
+	for name, env := range env {
 		if env.Secret {
-			list.Secrets = append(list.Secrets, key)
+			list.Secrets = append(list.Secrets, name)
 		} else {
-			list.Vars = append(list.Vars, key)
+			list.Vars = append(list.Vars, name)
 		}
 	}
 	sort.Strings(list.Vars)

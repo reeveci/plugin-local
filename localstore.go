@@ -106,9 +106,9 @@ func (s *LocalStore) GetAllEnv() map[string]schema.Env {
 	defer s.lock.Unlock()
 
 	result := make(map[string]schema.Env, len(s.data.Env))
-	for key, env := range s.data.Env {
+	for name, env := range s.data.Env {
 		if env.Value != "" {
-			result[key] = schema.Env{Value: env.Value, Priority: s.plugin.Priority, Secret: env.Secret}
+			result[name] = schema.Env{Value: env.Value, Priority: s.plugin.Priority, Secret: env.Secret}
 		}
 	}
 	return result
@@ -177,11 +177,11 @@ func (s *LocalStore) read() error {
 
 func (s *LocalStore) exportConfig(source Config) (result ExternalConfig, err error) {
 	result.Env = make(map[string]ExternalEnv, len(source.Env))
-	for key, env := range source.Env {
+	for name, env := range source.Env {
 		if env.Secret {
-			result.Env[key] = ExternalEnv{Value: env.Encrypted, Secret: true}
+			result.Env[name] = ExternalEnv{Value: env.Encrypted, Secret: true}
 		} else {
-			result.Env[key] = ExternalEnv{Value: env.Value, Secret: false}
+			result.Env[name] = ExternalEnv{Value: env.Value, Secret: false}
 		}
 	}
 
@@ -190,17 +190,17 @@ func (s *LocalStore) exportConfig(source Config) (result ExternalConfig, err err
 
 func (s *LocalStore) importConfig(source ExternalConfig) (result Config, err error) {
 	result.Env = make(map[string]Env, len(source.Env))
-	for key, env := range source.Env {
+	for name, env := range source.Env {
 		if env.Secret {
 			decryptedValue, err := encryption.DecryptSecret(s.plugin.SecretKey, env.Value)
 			if err != nil {
-				return result, fmt.Errorf("error decrypting secret %s - %s", key, err)
+				return result, fmt.Errorf("error decrypting secret %s - %s", name, err)
 			}
 			if decryptedValue != "" {
-				result.Env[key] = Env{Value: decryptedValue, Encrypted: env.Value, Secret: true}
+				result.Env[name] = Env{Value: decryptedValue, Encrypted: env.Value, Secret: true}
 			}
 		} else if env.Value != "" {
-			result.Env[key] = Env{Value: env.Value, Secret: false}
+			result.Env[name] = Env{Value: env.Value, Secret: false}
 		}
 	}
 
@@ -210,12 +210,12 @@ func (s *LocalStore) importConfig(source ExternalConfig) (result Config, err err
 func censorSecrets(env map[string]schema.Env) map[string]schema.Env {
 	censoredEnv := make(map[string]schema.Env, len(env))
 
-	for key, env := range env {
+	for name, env := range env {
 		if env.Secret {
 			env.Value = "*******"
 		}
 
-		censoredEnv[key] = env
+		censoredEnv[name] = env
 	}
 
 	return censoredEnv
