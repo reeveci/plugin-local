@@ -6,15 +6,16 @@ This is a [Reeve](https://github.com/reeveci/reeve) plugin for providing pipelin
 
 This plugin supports configuration via the WebUI plugin.
 
-Configuration is also supported via the CLI API:
+Configuration is also supported via the [CLI API](https://github.com/reeveci/reeve-cli):
 
 ```sh
-reeve-cli --url <server-url> --usage
-reeve-cli --url <server-url> local set <name> <value>
-reeve-cli --url <server-url> local set-secret <name> <value>
+reeve ask local --list
+reeve ask local set <name> <value>
+reeve ask local set-secret <name> <value>
+reeve ask local list
 ```
 
-Encryption takes place on the server, so make sure to use a secure connection between reeve-cli and the server. That is, use TLS with a valid certificate and do not set the `--insecure` flag.
+Encryption takes place on the server, so make sure to use a secure connection between reeve-cli and the server. That is, use TLS with a valid certificate and do not set the `insecure` option.
 
 ### Settings
 
